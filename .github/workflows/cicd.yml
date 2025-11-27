@@ -56,7 +56,7 @@ jobs:
 
     - name: Build and Push Image
       run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/devops:${{ github.sha }} .
+        docker build . -t ${{ secrets.DOCKER_USERNAME }}/devops:${{ github.sha }}
         docker push ${{ secrets.DOCKER_USERNAME }}/devops:${{ github.sha }}
 
     - name: Deploy to Azure Web App
