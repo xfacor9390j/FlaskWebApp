@@ -1,0 +1,95 @@
+# GitLab CI/CD Pipeline for Python Package with Docker Deploy to Azure
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# Build job with matrix for multiple Python versions
+.build_template: &build_template
+  stage: build
+  image: python:${PYTHON_VERSION}
+  before_script:
+    - python -m pip install --upgrade pip
+    - python -m pip install flake8
+  script:
+    - echo "Current working directory: $(pwd)"
+    - ls -la
+    - cd FlaskWebProject1
+    - echo "Contents of FlaskWebProject1:"
+    - ls -la
+    - cd ..
+    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+
+build:python39:
+  <<: *build_template
+  variables:
+    PYTHON_VERSION: "3.9"
+
+build:python310:
+  <<: *build_template
+  variables:
+    PYTHON_VERSION: "3.10"
+
+build:python311:
+  <<: *build_template
+  variables:
+    PYTHON_VERSION: "3.11"
+
+# Lint job
+lint:
+  stage: test
+  image: python:3.9
+  before_script:
+    - python -m pip install --upgrade pip
+    - python -m pip install flake8
+    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+  script:
+    # Stop the build if there are Python syntax errors or undefined names
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    # Exit-zero treats all errors as warnings
+    - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Test job
+test:
+  stage: test
+  image: python:3.9
+  before_script:
+    - python -m pip install --upgrade pip
+    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+  script:
+    - pytest -v
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Deploy job
+deploy:
+  stage: deploy
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  script:
+    - docker build -t $DOCKER_USERNAME/devops:$CI_COMMIT_SHA .
+    - docker push $DOCKER_USERNAME/devops:$CI_COMMIT_SHA
+    # Deploy to Azure Web App
+    - apk add --no-cache curl
+    - |
+      curl -X POST https://devopsepita.scm.azurewebsites.net/api/deployments \
+        -H "Content-Type: application/json" \
+        -u "\$devopsepita:$AZURE_WEBAPP_PUBLISH_PROFILE" \
+        -d "{\"image\": \"$DOCKER_USERNAME/devops:$CI_COMMIT_SHA\"}"
+  only:
+    - main
+  needs:
+    - lint
+    - test
