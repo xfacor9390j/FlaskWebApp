@@ -48,7 +48,7 @@ def final():
 
 
 @app.route('/hello')
-def final():
+def hello():
     """Renders the hello page."""
     return render_template(
         'final.html',
