@@ -45,3 +45,15 @@ def final():
         year=datetime.now().year,
         message='Your   application description page.'
     )
+
+
+@app.route('/hello')
+def final():
+    """Renders the hello page."""
+    return render_template(
+        'final.html',
+        title='About',
+        year=datetime.now().year,
+        message='welcome to my page author is Abhinay.'
+    )
+
