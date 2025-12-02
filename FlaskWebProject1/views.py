@@ -37,7 +37,7 @@ def about():
     )
 
 @app.route('/final')
-def about():
+def final():
     """Renders the about page."""
     return render_template(
         'final.html',
