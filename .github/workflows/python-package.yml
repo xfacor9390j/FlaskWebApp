@@ -49,3 +49,6 @@ jobs:
           app-name: 'abhi9'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           images: '${{ secrets.DOCKER_USERNAME }}/devops:${{ github.sha }}'
+
+
+          
